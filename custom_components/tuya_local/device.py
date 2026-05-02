@@ -3,6 +3,7 @@ API for Tuya Local devices.
 """
 
 import asyncio
+import json
 import logging
 from asyncio.exceptions import CancelledError
 from threading import Lock
@@ -504,6 +505,16 @@ class TuyaLocalDevice(object):
 
     async def async_set_property(self, dps_id, value):
         await self.async_set_properties({dps_id: value})
+
+    async def async_send_ir_library_command(self, dps_id, payload):
+        """Send an IR-library control payload to a DP.
+
+        Used by entities (e.g. climate) that need to trigger IR
+        transmission via the device's stored codeset library after
+        updating value DPs. The payload is JSON-encoded; the DP id may
+        be passed as int or str.
+        """
+        await self.async_set_properties({str(dps_id): json.dumps(payload)})
 
     def anticipate_property_value(self, dps_id, value):
         """

@@ -653,3 +653,33 @@ def test_should_poll(subject):
     # Test initial polling
     subject._cached_state = {}
     assert subject.should_poll
+
+
+@pytest.mark.asyncio
+async def test_async_send_ir_library_command_writes_json_to_dp(subject, mocker):
+    """JSON-encode the payload and write to the named DP via async_set_properties."""
+    import json
+
+    mock_set = mocker.patch.object(subject, "async_set_properties")
+    payload = {"control": "irlib_send", "ver": "3", "devid": "subdev123"}
+
+    await subject.async_send_ir_library_command(201, payload)
+
+    mock_set.assert_awaited_once()
+    written = mock_set.await_args.args[0]
+    assert "201" in written
+    assert json.loads(written["201"]) == payload
+
+
+@pytest.mark.asyncio
+async def test_async_send_ir_library_command_accepts_int_or_str_dp(subject, mocker):
+    """DP id can be passed as int or str; both produce the same write."""
+    mock_set = mocker.patch.object(subject, "async_set_properties")
+
+    await subject.async_send_ir_library_command(201, {"a": 1})
+    await subject.async_send_ir_library_command("201", {"a": 1})
+
+    assert mock_set.await_count == 2
+    first = mock_set.await_args_list[0].args[0]
+    second = mock_set.await_args_list[1].args[0]
+    assert first == second
