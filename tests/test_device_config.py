@@ -163,6 +163,7 @@ ENTITY_SCHEMA = vol.Schema(
         vol.Optional("deprecated"): str,
         vol.Optional("mode"): vol.In(["box", "slider"]),
         vol.Optional("hidden"): vol.In([True, "unavailable"]),
+        vol.Optional("ir_library_send_dp"): int,
         vol.Required("dps"): [DP_SCHEMA],
     }
 )
@@ -936,3 +937,64 @@ def test_writing_target_range(mocker):
     mock_device = mocker.MagicMock()
     cfg = TuyaDpsConfig(mock_entity, mock_config)
     assert cfg.get_values_to_set(mock_device, 100) == {"1": 16}
+
+
+def test_climate_ir_library_send_dp_property_returns_configured_value(mocker):
+    """A climate entity declaring ir_library_send_dp exposes it as a property."""
+    mock_device = mocker.MagicMock()
+    cfg = TuyaEntityConfig(
+        mock_device,
+        {
+            "entity": "climate",
+            "ir_library_send_dp": 201,
+            "dps": [{"id": 1, "type": "boolean", "name": "hvac_mode"}],
+        },
+    )
+    assert cfg.ir_library_send_dp == 201
+
+
+def test_climate_ir_library_send_dp_property_defaults_to_none(mocker):
+    """Entities without the config return None — opt-in only."""
+    mock_device = mocker.MagicMock()
+    cfg = TuyaEntityConfig(
+        mock_device,
+        {
+            "entity": "climate",
+            "dps": [{"id": 1, "type": "boolean", "name": "hvac_mode"}],
+        },
+    )
+    assert cfg.ir_library_send_dp is None
+
+
+def test_yaml_schema_accepts_ir_library_send_dp_on_entity():
+    """YAML_SCHEMA permits the new opt-in key on entities."""
+    valid_config = {
+        "name": "Test",
+        "entities": [
+            {
+                "entity": "climate",
+                "ir_library_send_dp": 201,
+                "dps": [
+                    {"id": 1, "type": "boolean", "name": "hvac_mode"},
+                    {"id": 201, "type": "string", "name": "send", "optional": True},
+                ],
+            }
+        ],
+    }
+    YAML_SCHEMA(valid_config)  # raises if invalid
+
+
+def test_yaml_schema_rejects_non_integer_ir_library_send_dp():
+    """ir_library_send_dp must be an integer (DP id)."""
+    invalid_config = {
+        "name": "Test",
+        "entities": [
+            {
+                "entity": "climate",
+                "ir_library_send_dp": "201",  # string — should fail
+                "dps": [{"id": 1, "type": "boolean", "name": "hvac_mode"}],
+            }
+        ],
+    }
+    with pytest.raises(vol.MultipleInvalid):
+        YAML_SCHEMA(invalid_config)

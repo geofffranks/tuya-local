@@ -314,6 +314,19 @@ class TuyaEntityConfig:
         return self._config["entity"]
 
     @property
+    def ir_library_send_dp(self):
+        """DP id to write an IR-library transmit payload to after value writes.
+
+        Opt-in: returns None unless the YAML declares it. When set, the
+        platform (e.g. climate) will fire an IR-library transmit
+        payload to this DP after each state-mutating setter, using
+        TuyaLocalDevice.async_send_ir_library_command. Required for
+        Tuya IR-AC controller hubs (e.g. Moes S16Pro) where DP value
+        writes alone don't trigger IR transmission.
+        """
+        return self._config.get("ir_library_send_dp")
+
+    @property
     def config_id(self):
         """The identifier for this entity in the config."""
         own_name = self._config.get("name")
